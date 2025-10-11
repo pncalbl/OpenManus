@@ -200,3 +200,8 @@ cython_debug/
 
 # node
 node_modules
+
+
+# claude
+CLAUDE.md
+.claude/
