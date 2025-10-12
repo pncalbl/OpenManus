@@ -42,6 +42,11 @@ class BaseAgent(BaseModel, ABC):
 
     duplicate_threshold: int = 2
 
+    # History management
+    session_id: Optional[str] = Field(
+        default=None, description="Session ID for conversation history"
+    )
+
     class Config:
         arbitrary_types_allowed = True
         extra = "allow"  # Allow extra fields for flexibility in subclasses

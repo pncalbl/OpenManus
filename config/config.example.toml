@@ -103,3 +103,12 @@ server_reference = "app.mcp.server" # default server module reference
 # Your can add additional agents into run-flow workflow to solve different-type tasks.
 [runflow]
 use_data_analysis_agent = false     # The Data Analysi Agent to solve various data analysis tasks
+
+# Optional Conversation History configuration
+# Enables saving and resuming conversation sessions
+[history]
+enabled = false           # Enable conversation history saving (default: false)
+storage_dir = "history"   # Directory under workspace/ for storing sessions (default: "history")
+retention_days = 30       # Auto-delete sessions older than N days, 0 = keep forever (default: 30)
+auto_cleanup = true       # Auto-cleanup old sessions on startup (default: true)
+max_sessions = 100        # Maximum sessions to keep, 0 = unlimited (default: 100)

@@ -66,6 +66,20 @@ class RunflowSettings(BaseModel):
     )
 
 
+class HistorySettings(BaseModel):
+    """Configuration for conversation history"""
+
+    enabled: bool = Field(False, description="Enable conversation history saving")
+    storage_dir: str = Field("history", description="Directory for storing history files")
+    retention_days: int = Field(
+        30, description="Days to keep history (0 = keep forever)"
+    )
+    auto_cleanup: bool = Field(True, description="Auto-cleanup old sessions on startup")
+    max_sessions: int = Field(
+        100, description="Maximum sessions to keep (0 = unlimited)"
+    )
+
+
 class BrowserSettings(BaseModel):
     headless: bool = Field(False, description="Whether to run browser in headless mode")
     disable_security: bool = Field(
@@ -106,7 +120,7 @@ class SandboxSettings(BaseModel):
 
 
 class DaytonaSettings(BaseModel):
-    daytona_api_key: str
+    daytona_api_key: Optional[str] = None
     daytona_server_url: Optional[str] = Field(
         "https://app.daytona.io/api", description=""
     )
@@ -188,6 +202,9 @@ class AppConfig(BaseModel):
     )
     daytona_config: Optional[DaytonaSettings] = Field(
         None, description="Daytona configuration"
+    )
+    history_config: Optional[HistorySettings] = Field(
+        None, description="History configuration"
     )
 
     class Config:
@@ -310,6 +327,14 @@ class Config:
             run_flow_settings = RunflowSettings(**run_flow_config)
         else:
             run_flow_settings = RunflowSettings()
+
+        # Handle history config
+        history_config = raw_config.get("history")
+        if history_config:
+            history_settings = HistorySettings(**history_config)
+        else:
+            history_settings = HistorySettings()
+
         config_dict = {
             "llm": {
                 "default": default_settings,
@@ -324,6 +349,7 @@ class Config:
             "mcp_config": mcp_settings,
             "run_flow_config": run_flow_settings,
             "daytona_config": daytona_settings,
+            "history_config": history_settings,
         }
 
         self._config = AppConfig(**config_dict)
@@ -357,6 +383,11 @@ class Config:
     def run_flow_config(self) -> RunflowSettings:
         """Get the Run Flow configuration"""
         return self._config.run_flow_config
+
+    @property
+    def history_config(self) -> HistorySettings:
+        """Get the History configuration"""
+        return self._config.history_config
 
     @property
     def workspace_root(self) -> Path:

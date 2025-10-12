@@ -229,6 +229,27 @@ class ToolCallAgent(ReActAgent):
     async def cleanup(self):
         """Clean up resources used by the agent's tools."""
         logger.info(f"🧹 Cleaning up resources for agent '{self.name}'...")
+
+        # Save conversation history if session_id is set
+        if self.session_id:
+            try:
+                from app.config import config
+                from app.history import get_history_manager
+
+                if config.history_config.enabled:
+                    history_manager = get_history_manager()
+                    success = history_manager.save_session(
+                        session_id=self.session_id,
+                        memory=self.memory,
+                        agent_name=self.name,
+                        agent_type=self.__class__.__name__,
+                        workspace_path=str(config.workspace_root),
+                    )
+                    if success:
+                        logger.info(f"💾 Conversation history saved: {self.session_id}")
+            except Exception as e:
+                logger.warning(f"Failed to save conversation history: {e}")
+
         for tool_name, tool_instance in self.available_tools.tool_map.items():
             if hasattr(tool_instance, "cleanup") and asyncio.iscoroutinefunction(
                 tool_instance.cleanup
