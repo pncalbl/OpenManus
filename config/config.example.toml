@@ -112,3 +112,23 @@ storage_dir = "history"   # Directory under workspace/ for storing sessions (def
 retention_days = 30       # Auto-delete sessions older than N days, 0 = keep forever (default: 30)
 auto_cleanup = true       # Auto-cleanup old sessions on startup (default: true)
 max_sessions = 100        # Maximum sessions to keep, 0 = unlimited (default: 100)
+
+# Optional Error Recovery configuration
+# Enables automatic retry, error diagnosis, and checkpoint/rollback
+[recovery]
+enabled = true                    # Enable error recovery mechanism (default: true)
+max_retries = 3                   # Maximum number of retry attempts (default: 3)
+initial_delay = 1.0               # Initial delay in seconds before retry (default: 1.0)
+max_delay = 60.0                  # Maximum delay in seconds between retries (default: 60.0)
+exponential_base = 2.0            # Exponential base for backoff calculation (default: 2.0)
+jitter = true                     # Add random jitter to delay (default: true)
+
+# Checkpoint settings
+checkpoint_enabled = true         # Enable checkpoint mechanism (default: true)
+checkpoint_interval = 5           # Save checkpoint every N steps (default: 5)
+checkpoint_max_count = 10         # Maximum number of checkpoints to keep (default: 10)
+auto_rollback = false             # Automatically rollback on error (default: false)
+
+# Diagnosis settings
+diagnosis_enabled = true          # Enable error diagnosis (default: true)
+show_suggestions = true           # Show fix suggestions (default: true)

@@ -80,6 +80,27 @@ class HistorySettings(BaseModel):
     )
 
 
+class RecoverySettings(BaseModel):
+    """Configuration for error recovery"""
+
+    enabled: bool = Field(True, description="Enable error recovery mechanism")
+    max_retries: int = Field(3, description="Maximum number of retry attempts")
+    initial_delay: float = Field(1.0, description="Initial delay in seconds before retry")
+    max_delay: float = Field(60.0, description="Maximum delay in seconds between retries")
+    exponential_base: float = Field(2.0, description="Exponential base for backoff calculation")
+    jitter: bool = Field(True, description="Add random jitter to delay")
+
+    # Checkpoint settings
+    checkpoint_enabled: bool = Field(True, description="Enable checkpoint mechanism")
+    checkpoint_interval: int = Field(5, description="Save checkpoint every N steps")
+    checkpoint_max_count: int = Field(10, description="Maximum number of checkpoints to keep")
+    auto_rollback: bool = Field(False, description="Automatically rollback on error")
+
+    # Diagnosis settings
+    diagnosis_enabled: bool = Field(True, description="Enable error diagnosis")
+    show_suggestions: bool = Field(True, description="Show fix suggestions")
+
+
 class BrowserSettings(BaseModel):
     headless: bool = Field(False, description="Whether to run browser in headless mode")
     disable_security: bool = Field(
@@ -205,6 +226,9 @@ class AppConfig(BaseModel):
     )
     history_config: Optional[HistorySettings] = Field(
         None, description="History configuration"
+    )
+    recovery_config: Optional[RecoverySettings] = Field(
+        None, description="Recovery configuration"
     )
 
     class Config:
@@ -335,6 +359,13 @@ class Config:
         else:
             history_settings = HistorySettings()
 
+        # Handle recovery config
+        recovery_config = raw_config.get("recovery")
+        if recovery_config:
+            recovery_settings = RecoverySettings(**recovery_config)
+        else:
+            recovery_settings = RecoverySettings()
+
         config_dict = {
             "llm": {
                 "default": default_settings,
@@ -350,6 +381,7 @@ class Config:
             "run_flow_config": run_flow_settings,
             "daytona_config": daytona_settings,
             "history_config": history_settings,
+            "recovery_config": recovery_settings,
         }
 
         self._config = AppConfig(**config_dict)
@@ -388,6 +420,11 @@ class Config:
     def history_config(self) -> HistorySettings:
         """Get the History configuration"""
         return self._config.history_config
+
+    @property
+    def recovery_config(self) -> RecoverySettings:
+        """Get the Recovery configuration"""
+        return self._config.recovery_config
 
     @property
     def workspace_root(self) -> Path:
