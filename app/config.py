@@ -101,6 +101,45 @@ class RecoverySettings(BaseModel):
     show_suggestions: bool = Field(True, description="Show fix suggestions")
 
 
+class ProgressSettings(BaseModel):
+    """Configuration for progress feedback"""
+
+    # Basic settings
+    enabled: bool = Field(True, description="Enable progress feedback")
+    display_style: str = Field(
+        "auto",
+        description="Display style: rich, simple, minimal, or auto (auto-detect)",
+    )
+
+    # Display options
+    show_percentage: bool = Field(True, description="Show completion percentage")
+    show_eta: bool = Field(True, description="Show estimated time remaining")
+    show_steps: bool = Field(True, description="Show step counter")
+    show_intermediate_results: bool = Field(
+        True, description="Show intermediate results"
+    )
+
+    # Intermediate results
+    intermediate_results_max_length: int = Field(
+        200, description="Max length for intermediate results"
+    )
+    intermediate_results_categories: List[str] = Field(
+        default_factory=lambda: ["tool_result", "llm_response", "error"],
+        description="Categories of intermediate results to show",
+    )
+
+    # Performance
+    refresh_rate: float = Field(0.1, description="Progress bar refresh rate in seconds")
+
+    # Graceful shutdown
+    enable_graceful_shutdown: bool = Field(
+        True, description="Enable graceful shutdown on Ctrl+C"
+    )
+    save_state_on_interrupt: bool = Field(
+        True, description="Save state when interrupted"
+    )
+
+
 class BrowserSettings(BaseModel):
     headless: bool = Field(False, description="Whether to run browser in headless mode")
     disable_security: bool = Field(
@@ -229,6 +268,9 @@ class AppConfig(BaseModel):
     )
     recovery_config: Optional[RecoverySettings] = Field(
         None, description="Recovery configuration"
+    )
+    progress_config: Optional[ProgressSettings] = Field(
+        None, description="Progress configuration"
     )
 
     class Config:
@@ -366,6 +408,13 @@ class Config:
         else:
             recovery_settings = RecoverySettings()
 
+        # Handle progress config
+        progress_config = raw_config.get("progress")
+        if progress_config:
+            progress_settings = ProgressSettings(**progress_config)
+        else:
+            progress_settings = ProgressSettings()
+
         config_dict = {
             "llm": {
                 "default": default_settings,
@@ -382,6 +431,7 @@ class Config:
             "daytona_config": daytona_settings,
             "history_config": history_settings,
             "recovery_config": recovery_settings,
+            "progress_config": progress_settings,
         }
 
         self._config = AppConfig(**config_dict)
@@ -425,6 +475,11 @@ class Config:
     def recovery_config(self) -> RecoverySettings:
         """Get the Recovery configuration"""
         return self._config.recovery_config
+
+    @property
+    def progress_config(self) -> ProgressSettings:
+        """Get the Progress configuration"""
+        return self._config.progress_config
 
     @property
     def workspace_root(self) -> Path:

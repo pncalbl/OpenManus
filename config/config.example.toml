@@ -132,3 +132,26 @@ auto_rollback = false             # Automatically rollback on error (default: fa
 # Diagnosis settings
 diagnosis_enabled = true          # Enable error diagnosis (default: true)
 show_suggestions = true           # Show fix suggestions (default: true)
+
+# Optional Progress Feedback configuration
+# Enables real-time progress tracking and display during task execution
+[progress]
+enabled = true                          # Enable progress feedback (default: true)
+display_style = "auto"                  # Display style: "rich", "simple", "minimal", or "auto" (auto-detect) (default: "auto")
+
+# Display options
+show_percentage = true                  # Show completion percentage (default: true)
+show_eta = true                         # Show estimated time remaining (default: true)
+show_steps = true                       # Show step counter (default: true)
+show_intermediate_results = true        # Show intermediate results (default: true)
+
+# Intermediate results settings
+intermediate_results_max_length = 200   # Max length for intermediate results display (default: 200)
+intermediate_results_categories = ["tool_result", "llm_response", "error"]  # Categories to show (default: ["tool_result", "llm_response", "error"])
+
+# Performance settings
+refresh_rate = 0.1                      # Progress bar refresh rate in seconds (default: 0.1)
+
+# Graceful shutdown settings
+enable_graceful_shutdown = true         # Enable graceful shutdown on Ctrl+C (default: true)
+save_state_on_interrupt = true          # Save state when interrupted (default: true)
