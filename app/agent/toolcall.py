@@ -178,6 +178,14 @@ class ToolCallAgent(ReActAgent):
 
             # Execute the tool
             logger.info(f"🔧 Activating tool: '{name}'...")
+
+            # Show tool execution in progress
+            if self.progress_tracker:
+                self.progress_tracker.message(
+                    f"Executing tool: {name}",
+                    level="info"
+                )
+
             result = await self.available_tools.execute(name=name, tool_input=args)
 
             # Handle special tools
@@ -195,6 +203,24 @@ class ToolCallAgent(ReActAgent):
                 else f"Cmd `{name}` completed with no output"
             )
 
+            # Show intermediate result in progress
+            if self.progress_tracker and self.progress_enabled:
+                try:
+                    from app.config import config
+
+                    if "tool_result" in config.progress_config.intermediate_results_categories:
+                        result_str = str(result)
+                        if len(result_str) > config.progress_config.intermediate_results_max_length:
+                            result_str = result_str[:config.progress_config.intermediate_results_max_length] + "..."
+
+                        self.progress_tracker.show_intermediate_result(
+                            title=f"Tool: {name}",
+                            content=result_str,
+                            category="result"
+                        )
+                except Exception:
+                    pass
+
             return observation
         except json.JSONDecodeError:
             error_msg = f"Error parsing arguments for {name}: Invalid JSON format"
@@ -205,6 +231,14 @@ class ToolCallAgent(ReActAgent):
         except Exception as e:
             error_msg = f"⚠️ Tool '{name}' encountered a problem: {str(e)}"
             logger.exception(error_msg)
+
+            # Show error in progress
+            if self.progress_tracker:
+                self.progress_tracker.message(
+                    f"Tool '{name}' failed: {str(e)}",
+                    level="error"
+                )
+
             return f"Error: {error_msg}"
 
     async def _handle_special_tool(self, name: str, result: Any, **kwargs):
@@ -229,6 +263,9 @@ class ToolCallAgent(ReActAgent):
     async def cleanup(self):
         """Clean up resources used by the agent's tools."""
         logger.info(f"🧹 Cleaning up resources for agent '{self.name}'...")
+
+        # Clean up progress tracking first
+        self._cleanup_progress_tracking()
 
         # Save conversation history if session_id is set
         if self.session_id:
@@ -265,7 +302,20 @@ class ToolCallAgent(ReActAgent):
 
     async def run(self, request: Optional[str] = None) -> str:
         """Run the agent with cleanup when done."""
+        # Initialize progress tracking
+        if request:
+            description = f"Running: {request[:50]}{'...' if len(request) > 50 else ''}"
+        else:
+            description = f"Running {self.name} agent"
+
+        self._init_progress_tracking(description)
+
         try:
             return await super().run(request)
+        except Exception as e:
+            # Mark progress as failed
+            if self.progress_tracker:
+                self.progress_tracker.fail(e, message=str(e))
+            raise
         finally:
             await self.cleanup()

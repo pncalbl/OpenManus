@@ -5,6 +5,7 @@
 """
 
 from app.progress.events import ProgressEvent, ProgressEventBus, ProgressEventType
+from app.progress.interrupt import GracefulShutdownHandler
 from app.progress.tracker import ProgressTracker
 
 
@@ -13,6 +14,7 @@ __all__ = [
     "ProgressEvent",
     "ProgressEventBus",
     "ProgressEventType",
+    "GracefulShutdownHandler",
 ]
 
 # 全局事件总线实例

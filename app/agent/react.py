@@ -32,7 +32,31 @@ class ReActAgent(BaseAgent, ABC):
 
     async def step(self) -> str:
         """Execute a single step: think and act."""
+        # Update progress if tracking is enabled
+        if self.progress_tracker:
+            self.progress_tracker.start_step(f"Step {self.current_step}")
+
         should_act = await self.think()
         if not should_act:
-            return "Thinking complete - no action needed"
-        return await self.act()
+            result = "Thinking complete - no action needed"
+            if self.progress_tracker:
+                self.progress_tracker.complete_step(
+                    f"Step {self.current_step}", result=result
+                )
+                self.progress_tracker.update(
+                    message=result, increment=1
+                )
+            return result
+
+        result = await self.act()
+
+        # Update progress with result
+        if self.progress_tracker:
+            self.progress_tracker.complete_step(
+                f"Step {self.current_step}", result="Completed"
+            )
+            self.progress_tracker.update(
+                message=f"Step {self.current_step} completed", increment=1
+            )
+
+        return result

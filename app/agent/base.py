@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from contextlib import asynccontextmanager
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -8,6 +8,10 @@ from app.llm import LLM
 from app.logger import logger
 from app.sandbox.client import SANDBOX_CLIENT
 from app.schema import ROLE_TYPE, AgentState, Memory, Message
+
+if TYPE_CHECKING:
+    from app.progress import GracefulShutdownHandler, ProgressTracker
+    from app.progress.display import ProgressDisplay, ProgressEventHandler
 
 
 class BaseAgent(BaseModel, ABC):
@@ -47,6 +51,23 @@ class BaseAgent(BaseModel, ABC):
         default=None, description="Session ID for conversation history"
     )
 
+    # Progress tracking
+    progress_enabled: bool = Field(
+        default=True, description="Enable progress tracking"
+    )
+    progress_tracker: Optional["ProgressTracker"] = Field(
+        default=None, description="Progress tracker instance", exclude=True
+    )
+    progress_display: Optional["ProgressDisplay"] = Field(
+        default=None, description="Progress display instance", exclude=True
+    )
+    progress_handler: Optional["ProgressEventHandler"] = Field(
+        default=None, description="Progress event handler", exclude=True
+    )
+    shutdown_handler: Optional["GracefulShutdownHandler"] = Field(
+        default=None, description="Graceful shutdown handler", exclude=True
+    )
+
     class Config:
         arbitrary_types_allowed = True
         extra = "allow"  # Allow extra fields for flexibility in subclasses
@@ -58,6 +79,16 @@ class BaseAgent(BaseModel, ABC):
             self.llm = LLM(config_name=self.name.lower())
         if not isinstance(self.memory, Memory):
             self.memory = Memory()
+
+        # Initialize progress tracking from config
+        try:
+            from app.config import config
+
+            self.progress_enabled = config.progress_config.enabled
+        except Exception:
+            # If config fails, keep default
+            pass
+
         return self
 
     @asynccontextmanager
@@ -199,3 +230,85 @@ class BaseAgent(BaseModel, ABC):
     def messages(self, value: List[Message]):
         """Set the list of messages in the agent's memory."""
         self.memory.messages = value
+
+    def _init_progress_tracking(self, description: str):
+        """Initialize progress tracking components."""
+        if not self.progress_enabled:
+            return
+
+        try:
+            from app.config import config
+            from app.progress import GracefulShutdownHandler, ProgressTracker, get_event_bus
+            from app.progress.display import (
+                ProgressDisplay,
+                ProgressEventHandler,
+                detect_terminal_capabilities,
+            )
+
+            # Create progress tracker
+            self.progress_tracker = ProgressTracker(
+                total_steps=self.max_steps,
+                description=description,
+            )
+
+            # Determine display style
+            display_style = config.progress_config.display_style
+            if display_style == "auto":
+                display_style = detect_terminal_capabilities()
+
+            # Create display component
+            self.progress_display = ProgressDisplay(
+                style=display_style,
+                show_percentage=config.progress_config.show_percentage,
+                show_eta=config.progress_config.show_eta,
+                show_steps=config.progress_config.show_steps,
+                show_intermediate_results=config.progress_config.show_intermediate_results,
+                intermediate_results_max_length=config.progress_config.intermediate_results_max_length,
+            )
+
+            # Create event handler
+            self.progress_handler = ProgressEventHandler(self.progress_display)
+
+            # Subscribe to events
+            event_bus = get_event_bus()
+            event_bus.subscribe_all(self.progress_handler.handle_event)
+
+            # Create graceful shutdown handler if enabled
+            if config.progress_config.enable_graceful_shutdown:
+                self.shutdown_handler = GracefulShutdownHandler(
+                    tracker=self.progress_tracker,
+                    save_state=config.progress_config.save_state_on_interrupt,
+                    workspace_root=config.workspace_root,
+                )
+
+            logger.debug(f"Progress tracking initialized for agent '{self.name}'")
+        except Exception as e:
+            logger.warning(f"Failed to initialize progress tracking: {e}")
+            self.progress_enabled = False
+
+    def _cleanup_progress_tracking(self):
+        """Clean up progress tracking resources."""
+        if not self.progress_enabled:
+            return
+
+        try:
+            # Unregister shutdown handler
+            if self.shutdown_handler:
+                self.shutdown_handler.unregister_handlers()
+
+            # Cleanup display
+            if self.progress_handler:
+                self.progress_handler.cleanup()
+
+            # Complete tracker
+            if self.progress_tracker and self.progress_tracker.is_running:
+                self.progress_tracker.complete(message="Agent execution completed")
+
+            logger.debug(f"Progress tracking cleaned up for agent '{self.name}'")
+        except Exception as e:
+            logger.warning(f"Error cleaning up progress tracking: {e}")
+        finally:
+            self.progress_tracker = None
+            self.progress_display = None
+            self.progress_handler = None
+            self.shutdown_handler = None
