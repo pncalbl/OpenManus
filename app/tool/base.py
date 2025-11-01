@@ -7,34 +7,6 @@ from pydantic import BaseModel, Field
 from app.utils.logger import logger
 
 
-# class BaseTool(ABC, BaseModel):
-#     name: str
-#     description: str
-#     parameters: Optional[dict] = None
-
-#     class Config:
-#         arbitrary_types_allowed = True
-
-#     async def __call__(self, **kwargs) -> Any:
-#         """Execute the tool with given parameters."""
-#         return await self.execute(**kwargs)
-
-#     @abstractmethod
-#     async def execute(self, **kwargs) -> Any:
-#         """Execute the tool with given parameters."""
-
-#     def to_param(self) -> Dict:
-#         """Convert tool to function call format."""
-#         return {
-#             "type": "function",
-#             "function": {
-#                 "name": self.name,
-#                 "description": self.description,
-#                 "parameters": self.parameters,
-#             },
-#         }
-
-
 class ToolResult(BaseModel):
     """Represents the result of a tool execution."""
 
@@ -94,24 +66,10 @@ class BaseTool(ABC, BaseModel):
     name: str
     description: str
     parameters: Optional[dict] = None
-    # _schemas: Dict[str, List[ToolSchema]] = {}
 
     class Config:
         arbitrary_types_allowed = True
         underscore_attrs_are_private = False
-
-    # def __init__(self, **data):
-    #     """Initialize tool with model validation and schema registration."""
-    #     super().__init__(**data)
-    #     logger.debug(f"Initializing tool class: {self.__class__.__name__}")
-    #     self._register_schemas()
-
-    # def _register_schemas(self):
-    #     """Register schemas from all decorated methods."""
-    #     for name, method in inspect.getmembers(self, predicate=inspect.ismethod):
-    #         if hasattr(method, 'tool_schemas'):
-    #             self._schemas[name] = method.tool_schemas
-    #             logger.debug(f"Registered schemas for method '{name}' in {self.__class__.__name__}")
 
     async def __call__(self, **kwargs) -> Any:
         """Execute the tool with given parameters."""
@@ -135,14 +93,6 @@ class BaseTool(ABC, BaseModel):
                 "parameters": self.parameters,
             },
         }
-
-    # def get_schemas(self) -> Dict[str, List[ToolSchema]]:
-    #     """Get all registered tool schemas.
-
-    #     Returns:
-    #         Dict mapping method names to their schema definitions
-    #     """
-    #     return self._schemas
 
     def success_response(self, data: Union[Dict[str, Any], str]) -> ToolResult:
         """Create a successful tool result.
