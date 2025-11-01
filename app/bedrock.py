@@ -15,7 +15,20 @@ CURRENT_TOOLUSE_ID = None
 
 # Class to handle OpenAI-style response formatting
 class OpenAIResponse:
+    """
+    Wrapper class to convert Bedrock responses to OpenAI-compatible format.
+
+    This class recursively converts nested dictionaries and lists into
+    OpenAIResponse objects to provide dot-notation access to response fields.
+    """
+
     def __init__(self, data):
+        """
+        Initialize OpenAIResponse from a dictionary.
+
+        Args:
+            data: Dictionary containing response data from Bedrock
+        """
         # Recursively convert nested dicts and lists to OpenAIResponse objects
         for key, value in data.items():
             if isinstance(value, dict):
@@ -28,6 +41,12 @@ class OpenAIResponse:
             setattr(self, key, value)
 
     def model_dump(self, *args, **kwargs):
+        """
+        Convert the response object to a dictionary.
+
+        Returns:
+            dict: Response data with added timestamp
+        """
         # Convert object to dict and add timestamp
         data = self.__dict__
         data["created_at"] = datetime.now().isoformat()
@@ -36,7 +55,19 @@ class OpenAIResponse:
 
 # Main client class for interacting with Amazon Bedrock
 class BedrockClient:
+    """
+    Amazon Bedrock client for Claude models.
+
+    This client provides an interface to interact with Claude models
+    via Amazon Bedrock, compatible with OpenAI-style API calls.
+
+    Attributes:
+        client: Boto3 Bedrock runtime client
+        chat: Chat interface for completions
+    """
+
     def __init__(self):
+        """Initialize Bedrock client using AWS credentials from environment."""
         # Initialize Bedrock client, you need to configure AWS env first
         try:
             self.client = boto3.client("bedrock-runtime")
@@ -48,16 +79,56 @@ class BedrockClient:
 
 # Chat interface class
 class Chat:
+    """
+    Chat interface wrapper for Bedrock client.
+
+    Provides access to chat completions functionality.
+
+    Attributes:
+        completions: ChatCompletions handler
+    """
+
     def __init__(self, client):
+        """
+        Initialize Chat interface.
+
+        Args:
+            client: Boto3 Bedrock runtime client
+        """
         self.completions = ChatCompletions(client)
 
 
 # Core class handling chat completions functionality
 class ChatCompletions:
+    """
+    Handles chat completions with Amazon Bedrock Claude models.
+
+    This class manages the conversion between OpenAI-style API format
+    and Bedrock's native format, including tool calling support.
+
+    Attributes:
+        client: Boto3 Bedrock runtime client
+    """
+
     def __init__(self, client):
+        """
+        Initialize ChatCompletions handler.
+
+        Args:
+            client: Boto3 Bedrock runtime client
+        """
         self.client = client
 
     def _convert_openai_tools_to_bedrock_format(self, tools):
+        """
+        Convert OpenAI tool definitions to Bedrock format.
+
+        Args:
+            tools: List of OpenAI-style tool definitions
+
+        Returns:
+            list: Bedrock-formatted tool specifications
+        """
         # Convert OpenAI function calling format to Bedrock tool format
         bedrock_tools = []
         for tool in tools:
@@ -84,6 +155,15 @@ class ChatCompletions:
         return bedrock_tools
 
     def _convert_openai_messages_to_bedrock_format(self, messages):
+        """
+        Convert OpenAI message format to Bedrock format.
+
+        Args:
+            messages: List of OpenAI-style messages
+
+        Returns:
+            tuple: (bedrock_messages, system_prompt)
+        """
         # Convert OpenAI message format to Bedrock message format
         bedrock_messages = []
         system_prompt = []

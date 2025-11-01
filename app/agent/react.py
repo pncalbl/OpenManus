@@ -9,6 +9,31 @@ from app.schema import AgentState, Memory
 
 
 class ReActAgent(BaseAgent, ABC):
+    """
+    Abstract base class for ReAct (Reasoning + Acting) pattern agents.
+
+    ReActAgent implements the ReAct framework where agents alternate between
+    thinking (reasoning about the current state) and acting (taking actions
+    based on their reasoning).
+
+    The agent follows this loop:
+    1. Think: Analyze current state and decide what to do
+    2. Act: Execute the decided action
+    3. Observe: Get feedback from the action
+    4. Repeat until task is complete
+
+    Attributes:
+        name: Agent identifier
+        description: Optional agent description
+        system_prompt: System-level instructions for the agent
+        next_step_prompt: Prompt for the next thinking step
+        llm: Language model for reasoning
+        memory: Conversation and state memory
+        state: Current agent state (IDLE, RUNNING, FINISHED, etc.)
+        max_steps: Maximum number of think-act cycles
+        current_step: Current step number
+    """
+
     name: str
     description: Optional[str] = None
 
@@ -24,14 +49,39 @@ class ReActAgent(BaseAgent, ABC):
 
     @abstractmethod
     async def think(self) -> bool:
-        """Process current state and decide next action"""
+        """
+        Process current state and decide next action.
+
+        This method should analyze the current state and determine what
+        action (if any) should be taken next.
+
+        Returns:
+            bool: True if an action should be taken, False otherwise
+        """
 
     @abstractmethod
     async def act(self) -> str:
-        """Execute decided actions"""
+        """
+        Execute decided actions.
+
+        This method should perform the action determined by think().
+
+        Returns:
+            str: Result of the action
+        """
 
     async def step(self) -> str:
-        """Execute a single step: think and act."""
+        """
+        Execute a single ReAct step: think and act.
+
+        This method executes one complete cycle of the ReAct pattern:
+        - Call think() to decide what to do
+        - If thinking determines action is needed, call act()
+        - Update progress tracking if enabled
+
+        Returns:
+            str: Result of the step execution
+        """
         # Update progress if tracking is enabled
         if self.progress_tracker:
             self.progress_tracker.start_step(f"Step {self.current_step}")
