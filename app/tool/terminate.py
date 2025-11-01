@@ -1,4 +1,4 @@
-from app.tool.base import BaseTool
+from app.tool.base import BaseTool, ToolResult
 
 
 _TERMINATE_DESCRIPTION = """Terminate the interaction when the request is met OR if the assistant cannot proceed further with the task.
@@ -20,9 +20,10 @@ class Terminate(BaseTool):
         "required": ["status"],
     }
 
-    async def execute(self, status: str) -> str:
+    async def execute(self, status: str) -> ToolResult:
         """Finish the current execution"""
-        return f"The interaction has been completed with status: {status}"
+        message = f"The interaction has been completed with status: {status}"
+        return ToolResult(output=message)
 
     async def cleanup(self) -> None:
         """Clean up resources (no resources to clean for this tool)."""

@@ -72,12 +72,20 @@ class BaseTool(ABC, BaseModel):
         underscore_attrs_are_private = False
 
     async def __call__(self, **kwargs) -> Any:
-        """Execute the tool with given parameters."""
-        return await self.execute(**kwargs)
+        """Execute the tool with given parameters and ensure ToolResult return."""
+        result = await self.execute(**kwargs)
+        # Wrap non-ToolResult returns for backward compatibility
+        if not isinstance(result, ToolResult):
+            result = ToolResult(output=result)
+        return result
 
     @abstractmethod
-    async def execute(self, **kwargs) -> Any:
-        """Execute the tool with given parameters."""
+    async def execute(self, **kwargs) -> Union[ToolResult, Any]:
+        """Execute the tool with given parameters.
+
+        Should return ToolResult when possible, but Any is allowed for special tools
+        like CreateChatCompletion that need to return structured types.
+        """
 
     def to_param(self) -> Dict:
         """Convert tool to function call format.

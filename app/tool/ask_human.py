@@ -1,4 +1,5 @@
 from app.tool import BaseTool
+from app.tool.base import ToolResult
 
 
 class AskHuman(BaseTool):
@@ -17,8 +18,9 @@ class AskHuman(BaseTool):
         "required": ["inquire"],
     }
 
-    async def execute(self, inquire: str) -> str:
-        return input(f"""Bot: {inquire}\n\nYou: """).strip()
+    async def execute(self, inquire: str) -> ToolResult:
+        response = input(f"""Bot: {inquire}\n\nYou: """).strip()
+        return ToolResult(output=response)
 
     async def cleanup(self) -> None:
         """Clean up resources (no resources to clean for this tool)."""
