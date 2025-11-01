@@ -192,3 +192,7 @@ class MCPClients(ToolCollection):
             self.tool_map = {}
             self.tools = tuple()
             logger.info("Disconnected from all MCP servers")
+
+    async def cleanup(self) -> None:
+        """Clean up all MCP connections."""
+        await self.disconnect()

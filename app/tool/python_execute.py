@@ -22,6 +22,11 @@ class PythonExecute(BaseTool):
         "required": ["code"],
     }
 
+    def __init__(self):
+        """Initialize the Python executor."""
+        super().__init__()
+        self._active_processes = []
+
     def _run_code(self, code: str, result_dict: dict, safe_globals: dict) -> None:
         original_stdout = sys.stdout
         try:
@@ -62,14 +67,30 @@ class PythonExecute(BaseTool):
                 target=self._run_code, args=(code, result, safe_globals)
             )
             proc.start()
+            self._active_processes.append(proc)
             proc.join(timeout)
 
             # timeout process
             if proc.is_alive():
                 proc.terminate()
                 proc.join(1)
+                if proc in self._active_processes:
+                    self._active_processes.remove(proc)
                 return {
                     "observation": f"Execution timeout after {timeout} seconds",
                     "success": False,
                 }
+
+            if proc in self._active_processes:
+                self._active_processes.remove(proc)
             return dict(result)
+
+    async def cleanup(self) -> None:
+        """Clean up any active processes."""
+        for proc in self._active_processes[:]:  # Copy list to avoid modification during iteration
+            if proc.is_alive():
+                proc.terminate()
+                proc.join(timeout=1)
+                if proc.is_alive():
+                    proc.kill()  # Force kill if terminate doesn't work
+            self._active_processes.remove(proc)

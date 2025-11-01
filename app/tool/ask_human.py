@@ -19,3 +19,7 @@ class AskHuman(BaseTool):
 
     async def execute(self, inquire: str) -> str:
         return input(f"""Bot: {inquire}\n\nYou: """).strip()
+
+    async def cleanup(self) -> None:
+        """Clean up resources (no resources to clean for this tool)."""
+        pass

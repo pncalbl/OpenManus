@@ -23,3 +23,7 @@ class Terminate(BaseTool):
     async def execute(self, status: str) -> str:
         """Finish the current execution"""
         return f"The interaction has been completed with status: {status}"
+
+    async def cleanup(self) -> None:
+        """Clean up resources (no resources to clean for this tool)."""
+        pass

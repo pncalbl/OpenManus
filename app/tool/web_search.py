@@ -407,6 +407,10 @@ class WebSearch(BaseTool):
             ),
         )
 
+    async def cleanup(self) -> None:
+        """Clean up resources (no resources to clean for this tool)."""
+        pass
+
 
 if __name__ == "__main__":
     web_search = WebSearch()

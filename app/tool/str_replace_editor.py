@@ -430,3 +430,7 @@ class StrReplaceEditor(BaseTool):
             + file_content
             + "\n"
         )
+
+    async def cleanup(self) -> None:
+        """Clean up resources (no resources to clean for this tool)."""
+        pass
