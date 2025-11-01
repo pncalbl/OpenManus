@@ -4,8 +4,18 @@ from typing import Optional
 from pydantic import Field
 
 from app.agent.base import BaseAgent
+from app.config import config
 from app.llm import LLM
 from app.schema import AgentState, Memory
+
+
+def _get_react_max_steps() -> int:
+    """Get react max_steps from config or use fallback."""
+    return (
+        config.agent_config.react_max_steps
+        if hasattr(config, "agent_config") and config.agent_config
+        else 10
+    )
 
 
 class ReActAgent(BaseAgent, ABC):
@@ -44,7 +54,7 @@ class ReActAgent(BaseAgent, ABC):
     memory: Memory = Field(default_factory=Memory)
     state: AgentState = AgentState.IDLE
 
-    max_steps: int = 10
+    max_steps: int = Field(default_factory=_get_react_max_steps)
     current_step: int = 0
 
     @abstractmethod

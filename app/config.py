@@ -66,6 +66,31 @@ class RunflowSettings(BaseModel):
     )
 
 
+class AgentSettings(BaseModel):
+    """Configuration for agent behavior"""
+
+    default_max_steps: int = Field(
+        20, description="Default maximum steps for agent execution"
+    )
+    toolcall_max_steps: int = Field(
+        30, description="Maximum steps for tool call agent"
+    )
+    react_max_steps: int = Field(
+        10, description="Maximum steps for ReAct agent"
+    )
+
+
+class ToolSettings(BaseModel):
+    """Configuration for tool behavior"""
+
+    snippet_lines: int = Field(
+        4, description="Number of context lines to show in file edit snippets"
+    )
+    max_response_length: int = Field(
+        16000, description="Maximum length of tool response output"
+    )
+
+
 class HistorySettings(BaseModel):
     """Configuration for conversation history"""
 
@@ -272,6 +297,12 @@ class AppConfig(BaseModel):
     progress_config: Optional[ProgressSettings] = Field(
         None, description="Progress configuration"
     )
+    agent_config: Optional[AgentSettings] = Field(
+        None, description="Agent behavior configuration"
+    )
+    tool_config: Optional[ToolSettings] = Field(
+        None, description="Tool behavior configuration"
+    )
 
     class Config:
         arbitrary_types_allowed = True
@@ -415,6 +446,20 @@ class Config:
         else:
             progress_settings = ProgressSettings()
 
+        # Agent configuration
+        agent_config = raw_config.get("agent")
+        if agent_config:
+            agent_settings = AgentSettings(**agent_config)
+        else:
+            agent_settings = AgentSettings()
+
+        # Tool configuration
+        tool_config = raw_config.get("tool")
+        if tool_config:
+            tool_settings = ToolSettings(**tool_config)
+        else:
+            tool_settings = ToolSettings()
+
         config_dict = {
             "llm": {
                 "default": default_settings,
@@ -432,6 +477,8 @@ class Config:
             "history_config": history_settings,
             "recovery_config": recovery_settings,
             "progress_config": progress_settings,
+            "agent_config": agent_settings,
+            "tool_config": tool_settings,
         }
 
         self._config = AppConfig(**config_dict)
@@ -480,6 +527,16 @@ class Config:
     def progress_config(self) -> ProgressSettings:
         """Get the Progress configuration"""
         return self._config.progress_config
+
+    @property
+    def agent_config(self) -> AgentSettings:
+        """Get the Agent configuration"""
+        return self._config.agent_config
+
+    @property
+    def tool_config(self) -> ToolSettings:
+        """Get the Tool configuration"""
+        return self._config.tool_config
 
     @property
     def workspace_root(self) -> Path:

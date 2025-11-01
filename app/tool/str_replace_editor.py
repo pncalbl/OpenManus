@@ -25,13 +25,21 @@ Command = Literal[
 ]
 
 # Constants
-SNIPPET_LINES: int = 4
-MAX_RESPONSE_LEN: int = 16000
 TRUNCATED_MESSAGE: str = (
     "<response clipped><NOTE>To save on context only part of this file has been shown to you. "
     "You should retry this tool after you have searched inside the file with `grep -n` "
     "in order to find the line numbers of what you are looking for.</NOTE>"
 )
+
+
+def _get_snippet_lines() -> int:
+    """Get snippet lines from config or use default."""
+    return config.tool_config.snippet_lines if hasattr(config, 'tool_config') and config.tool_config else 4
+
+
+def _get_max_response_len() -> int:
+    """Get max response length from config or use default."""
+    return config.tool_config.max_response_length if hasattr(config, 'tool_config') and config.tool_config else 16000
 
 # Tool description
 _STR_REPLACE_EDITOR_DESCRIPTION = """Custom editing tool for viewing, creating and editing files
@@ -49,9 +57,11 @@ Notes for using the `str_replace` command:
 
 
 def maybe_truncate(
-    content: str, truncate_after: Optional[int] = MAX_RESPONSE_LEN
+    content: str, truncate_after: Optional[int] = None
 ) -> str:
     """Truncate content and append a notice if content exceeds the specified length."""
+    if truncate_after is None:
+        truncate_after = _get_max_response_len()
     if not truncate_after or len(content) <= truncate_after:
         return content
     return content[:truncate_after] + TRUNCATED_MESSAGE
@@ -324,8 +334,9 @@ class StrReplaceEditor(BaseTool):
 
         # Create a snippet of the edited section
         replacement_line = file_content.split(old_str)[0].count("\n")
-        start_line = max(0, replacement_line - SNIPPET_LINES)
-        end_line = replacement_line + SNIPPET_LINES + new_str.count("\n")
+        snippet_lines = _get_snippet_lines()
+        start_line = max(0, replacement_line - snippet_lines)
+        end_line = replacement_line + snippet_lines + new_str.count("\n")
         snippet = "\n".join(new_file_content.split("\n")[start_line : end_line + 1])
 
         # Prepare the success message
@@ -367,10 +378,11 @@ class StrReplaceEditor(BaseTool):
         )
 
         # Create a snippet for preview
+        snippet_lines_count = _get_snippet_lines()
         snippet_lines = (
-            file_text_lines[max(0, insert_line - SNIPPET_LINES) : insert_line]
+            file_text_lines[max(0, insert_line - snippet_lines_count) : insert_line]
             + new_str_lines
-            + file_text_lines[insert_line : insert_line + SNIPPET_LINES]
+            + file_text_lines[insert_line : insert_line + snippet_lines_count]
         )
 
         # Join lines and write to file
@@ -385,7 +397,7 @@ class StrReplaceEditor(BaseTool):
         success_msg += self._make_output(
             snippet,
             "a snippet of the edited file",
-            max(1, insert_line - SNIPPET_LINES + 1),
+            max(1, insert_line - snippet_lines_count + 1),
         )
         success_msg += "Review the changes and make sure they are as expected (correct indentation, no duplicate lines, etc). Edit the file again if necessary."
 

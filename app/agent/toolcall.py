@@ -5,6 +5,7 @@ from typing import Any, List, Optional, Union
 from pydantic import Field
 
 from app.agent.react import ReActAgent
+from app.config import config
 from app.exceptions import TokenLimitExceeded
 from app.logger import logger
 from app.prompt.toolcall import NEXT_STEP_PROMPT, SYSTEM_PROMPT
@@ -13,6 +14,15 @@ from app.tool import CreateChatCompletion, Terminate, ToolCollection
 
 
 TOOL_CALL_REQUIRED = "Tool calls required but none provided"
+
+
+def _get_toolcall_max_steps() -> int:
+    """Get toolcall max_steps from config or use fallback."""
+    return (
+        config.agent_config.toolcall_max_steps
+        if hasattr(config, "agent_config") and config.agent_config
+        else 30
+    )
 
 
 class ToolCallAgent(ReActAgent):
@@ -33,7 +43,7 @@ class ToolCallAgent(ReActAgent):
     tool_calls: List[ToolCall] = Field(default_factory=list)
     _current_base64_image: Optional[str] = None
 
-    max_steps: int = 30
+    max_steps: int = Field(default_factory=_get_toolcall_max_steps)
     max_observe: Optional[Union[int, bool]] = None
 
     async def think(self) -> bool:

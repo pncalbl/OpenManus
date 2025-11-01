@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, List, Optional
 
 from pydantic import BaseModel, Field, model_validator
 
+from app.config import config
 from app.llm import LLM
 from app.logger import logger
 from app.sandbox.client import SANDBOX_CLIENT
@@ -12,6 +13,15 @@ from app.schema import ROLE_TYPE, AgentState, Memory, Message
 if TYPE_CHECKING:
     from app.progress import GracefulShutdownHandler, ProgressTracker
     from app.progress.display import ProgressDisplay, ProgressEventHandler
+
+
+def _get_default_max_steps() -> int:
+    """Get default max_steps from config or use fallback."""
+    return (
+        config.agent_config.default_max_steps
+        if hasattr(config, "agent_config") and config.agent_config
+        else 20
+    )
 
 
 class BaseAgent(BaseModel, ABC):
@@ -41,7 +51,10 @@ class BaseAgent(BaseModel, ABC):
     )
 
     # Execution control
-    max_steps: int = Field(default=10, description="Maximum steps before termination")
+    max_steps: int = Field(
+        default_factory=_get_default_max_steps,
+        description="Maximum steps before termination",
+    )
     current_step: int = Field(default=0, description="Current step in execution")
 
     duplicate_threshold: int = 2
